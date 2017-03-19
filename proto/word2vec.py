@@ -1,3 +1,7 @@
+"""
+Module with functions to encode words into dense real-valued vectors
+"""
+import sys
 import numpy as np
 
 
@@ -41,13 +45,18 @@ def word2vec(fpath=""):
       for nci in nbr_cc_ind:
         cc_mat[wi_cc_ind, nci] += 1
  
-  #TODO: Compute SVD of cc_mat
+  #TODO: Compute SVD of cc_mat without np if required
   k = 20
   Umat, S, Vmat = np.linalg.svd(cc_mat)
   word_vecs = Umat[:, :k] # Choose top k "singular"(~eigen) vectors
-  return word_vecs
+  return word_vecs, vocab
 
 
 if __name__ == "__main__":
-  fpath = "data/samples_00.txt"
-  word_vecs = word2vec(fpath)
+  if len(sys.argv) > 1:
+    fpath = sys.argv[1]
+  else:
+    fpath = "data/akns/set_00/eng.txt"
+  word_vecs, vocab = word2vec(fpath)
+  print word_vecs
+  print vocab
