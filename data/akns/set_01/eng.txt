@@ -1,10 +1,10 @@
-I like machine learning
+﻿I like learning
 I hate cooking
-I like eating
+I like coding
 Flowers are beautiful
 I like flowers
-I enjoy eating
-I enjoy cooking
+We like coding
+We like cooking
 You hate learning
 You like running
 Running is amazing
