@@ -14,7 +14,7 @@ def word2vec(fpath="", win_size=1):
   with open(fpath, 'r') as f:
     in_data = f.readlines()
   in_data = [x.strip("\n") for x in in_data]
-  in_data = [x.strip("\xef\xbb\xbf") for x in data]
+  in_data = [x.strip("\xef\xbb\xbf") for x in in_data]
 
   vocab = " ".join(in_data)
   vocab = np.unique(vocab.split(" "))
@@ -48,7 +48,7 @@ def word2vec(fpath="", win_size=1):
  
   #TODO: Compute SVD of cc_mat without np if required
   Umat, S, Vmat = np.linalg.svd(cc_mat)
-  return Umat, vocab, cc_mat
+  return Umat, vocab_indices, cc_mat
 
 
 if __name__ == "__main__":

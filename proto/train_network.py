@@ -11,6 +11,7 @@ def train_test_mozhi_net_old(train_data, test_data):
   # Initialize network architecturerun
   mozhi_net = nn.NeuralNet(4, max_epochs=2)
   mozhi_net.init_layer(0, node_count=2)
+  mozhi_net.init_layer(0, node_count=2)
   mozhi_net.init_layer(1, node_count=4)
   mozhi_net.init_layer(2, node_count=3)
   mozhi_net.init_layer(3, node_count=2)
@@ -55,10 +56,10 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
   
   """
   # Initialize network architecture
-  mozhi_net = nn.NeuralNet(layer_count=4, max_epochs=10000,eta=0.7)
+  mozhi_net = nn.NeuralNet(layer_count=4, max_epochs=1000,eta=0.7)
   mozhi_net.init_layer(0, node_count=wvecs_len)
-  mozhi_net.init_layer(1, node_count=20)
-  mozhi_net.init_layer(2, node_count=20)
+  mozhi_net.init_layer(1, node_count=40)
+  mozhi_net.init_layer(2, node_count=40)
   mozhi_net.init_layer(3, node_count=wvecs_len)
   
   
@@ -96,6 +97,7 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
     tr_data_en = [x.strip("\n") for x in tr_data_en]
     # Removing some additional characters it is adding to the file.
     tr_data_en = [x.strip("\xef\xbb\xbf") for x in tr_data_en]
+    print tr_data_en
     tr_data_en = " ".join(tr_data_en)
     # List which contains all the words from the training sentences
     tr_data_en = tr_data_en.split(" ") 
@@ -115,11 +117,11 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
     
     for i in np.arange(0, len(tr_data_en)):
       # Assuming that all the words in the training set can be found in vocab
-      tr_data[i,:wvecs_len] = tr_wvecs_en[tr_vocab_en[tr_data_en[i]],:];
+      tr_data[i,:wvecs_len] = tr_wvecs_en[tr_vocab_en[tr_data_en[i]],:]
     
     for i in np.arange(0, len(tr_data_fr)):
       # Assuming that all the words in the training set can be found in vocab
-      tr_data[i,wvecs_len:] = tr_wvecs_fr[tr_vocab_fr[tr_data_fr[i]],:];
+      tr_data[i,wvecs_len:] = tr_wvecs_fr[tr_vocab_fr[tr_data_fr[i]],:]
       
     # Set training and testing data to be used
     mozhi_net.set_train_data(tr_data)
@@ -176,6 +178,7 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
       temp2 = mozhi_net.predict(tst_data[i][j])
       # Transpose as predict returns column vector.
       temp2_list.append(temp2.T)
+      print temp2.T
     tst_target.append(temp2_list)
     temp2_list = []
   
@@ -201,7 +204,7 @@ if __name__ == "__main__":
                        tst_fpath="data\\akns\\set_01\\",
                        retrain=True, 
                        reenc=True,
-                       wvecs_len=12,
+                       wvecs_len=8,
                        wvecs_en_fpath="data\\wvecs_en_file.npy",
                        vocab_en_fpath="data\\vocab_en_file.npy",
                        cc_mat_en_fpath="data\\cc_mat_en_file.npy",
