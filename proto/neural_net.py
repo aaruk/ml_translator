@@ -72,8 +72,8 @@ class NeuralNet(object):
     Function sets training data to be used for wt updation using
     backpropagation
     """
-    self.train_data = inp_data
-    self.train_targets = inp_data[:, -2:] #NOTE: Hardcoded - replace with output unit_count
+    self.train_data = inp_data[:, :inp_data.shape[1]/2]
+    self.train_targets = inp_data[:, inp_data.shape[1]/2:]
     return
 
   def set_test_data(self, test_data=None):
@@ -81,8 +81,10 @@ class NeuralNet(object):
     Function sets training data to be used for wt updation using
     backpropagation
     """
-    self.test_data = test_data
-    self.test_targets = test_data[:, -2:] #NOTE: Hardcoded - replace with output unit_count
+    self.test_data = test_data[:, :test_data.shape[1]/2]
+    self.test_targets = test_data[:, test_data.shape[1]/2:]
+    #self.test_data = test_data
+    #self.test_targets = test_data[:, -2:] #NOTE: Hardcoded - replace with output unit_count
     return
 
   def sigmoid(self, x=None):
@@ -162,8 +164,10 @@ class NeuralNet(object):
 
     # Update all weights together to avoid confusion
     # self.layer_wts[1:] = self.layer_wts[1:]-dw_list
+    jj = 0
     for l in np.arange(self.layer_count-1,  0, step=-1):
-      self.layer_wts[i] =  self.layer_wts[i]-self.eta*dw_list[i+1]
+      self.layer_wts[l] =  self.layer_wts[l]-self.eta*dw_list[jj]
+      jj += 1
     return
 
   def fit(self):

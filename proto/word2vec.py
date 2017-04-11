@@ -5,7 +5,7 @@ import sys
 import numpy as np
 
 
-def word2vec(fpath=""):
+def word2vec(fpath="", win_size=1):
   """
   Reads text file and computes dense vectors using cooccurence matrix + svd
   """ 
@@ -14,6 +14,7 @@ def word2vec(fpath=""):
   with open(fpath, 'r') as f:
     in_data = f.readlines()
   in_data = [x.strip("\n") for x in in_data]
+  in_data = [x.strip("\xef\xbb\xbf") for x in data]
 
   vocab = " ".join(in_data)
   vocab = np.unique(vocab.split(" "))
@@ -25,7 +26,7 @@ def word2vec(fpath=""):
   for i in np.arange(vocab_rows):
     vocab_indices[vocab[i]] = i
 
-  win_size = 1 # window size for cooccurence matrix
+  #win_size = 1 # window size for cooccurence matrix
   # Go through each word in vocabulary and update cooccurence matrix
   for i, sentence in enumerate(in_data):
     word_list = sentence.split(" ")
@@ -46,10 +47,8 @@ def word2vec(fpath=""):
         cc_mat[wi_cc_ind, nci] += 1
  
   #TODO: Compute SVD of cc_mat without np if required
-  k = 20
   Umat, S, Vmat = np.linalg.svd(cc_mat)
-  word_vecs = Umat[:, :k] # Choose top k "singular"(~eigen) vectors
-  return word_vecs, vocab
+  return Umat, vocab, cc_mat
 
 
 if __name__ == "__main__":

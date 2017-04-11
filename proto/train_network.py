@@ -191,8 +191,6 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
     
   print tst_target_fr
   
-  
-    
   return
 
  

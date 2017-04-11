@@ -23,10 +23,14 @@ def vec2word(in_vec=None, vocab=None, word2vec_arr=None, out_word=""):
   word_idx = np.argmin(dist)
 
   # If distance is within acceptable limits, pull word from vocabulary
+  # TODO: Add code in previous modules to get a dictionary with
+  #       Indices as keys and words as values
   if dist[word_idx] < 0.1:
-    word = vocab[word_idx]
+    word = vocab.keys()[vocab.values().index(word_idx)]
+    #word = vocab[word_idx]
   else:
-    word = "UNK"
+    word = vocab.keys()[vocab.values().index(word_idx)]
+    #word = vocab[word_idx]
   return word
 
 if __name__ == "__main__":
