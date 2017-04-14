@@ -128,11 +128,11 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
   # say the phr_wrd_cnt=2, this means you will have 2 words as input. One going 
   # to inout layer and the second one going in parallel to the first hidden layer.
   # So seq_node_cnt=wvecs_len for layer1.
-  mozhi_net = nn.NeuralNet(7, max_epochs=10000, eta=0.5, phr_wrd_cnt=phr_wrd_cnt)
+  mozhi_net = nn.NeuralNet(7, activation="tanh", max_epochs=5000, eta=0.01, phr_wrd_cnt=phr_wrd_cnt)
   mozhi_net.init_layer(0, node_count=wvecs_len, seq_node_cnt=0)
-  mozhi_net.init_layer(1, node_count=40, seq_node_cnt=wvecs_len)
-  mozhi_net.init_layer(2, node_count=40, seq_node_cnt=wvecs_len)
-  mozhi_net.init_layer(3, node_count=40, seq_node_cnt=0)
+  mozhi_net.init_layer(1, node_count=200, seq_node_cnt=wvecs_len)
+  mozhi_net.init_layer(2, node_count=100, seq_node_cnt=wvecs_len)
+  mozhi_net.init_layer(3, node_count=200, seq_node_cnt=0)
   mozhi_net.init_layer(4, node_count=wvecs_len, seq_node_cnt=0)
   mozhi_net.init_layer(5, node_count=wvecs_len, seq_node_cnt=0)
   mozhi_net.init_layer(6, node_count=wvecs_len, seq_node_cnt=0)
@@ -142,8 +142,8 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
     # Retrain the neural network with the training data received.
     if reenc:
       # Reencode the words into their feature vector representation.
-      tr_wvecs_en, tr_vocab_en, tr_cc_mat_en = w2v.word2vec(tr_fpath+"eng.txt")
-      tr_wvecs_fr, tr_vocab_fr, tr_cc_mat_fr = w2v.word2vec(tr_fpath+"frn.txt")
+      tr_wvecs_en, tr_vocab_en, tr_cc_mat_en = w2v.word2vec(tr_fpath+"eng.txt", win_size=1)
+      tr_wvecs_fr, tr_vocab_fr, tr_cc_mat_fr = w2v.word2vec(tr_fpath+"frn.txt", win_size=1)
       np.save(wvecs_en_fpath,tr_wvecs_en) # Saving the entire umatrix
       np.save(vocab_en_fpath,tr_vocab_en)
       np.save(cc_mat_en_fpath,tr_cc_mat_en)
@@ -223,13 +223,11 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
   # appending to the main list.
   temp1_list = [] 
   
-  sidx = 0
   spidx = 0
   
   # Decoder
-  for m in np.arange(0,len(tst_sent_len_fr_list)):
+  for sidx in np.arange(0,len(tst_sent_len_fr_list)):
     temp_mat = tst_target_mat_fr[spidx:spidx+tst_sent_len_fr_list[sidx][1],:]
-
     for i in np.arange(0,tst_sent_len_fr_list[sidx][0]):
       temp1 = v2w.vec2word(in_vec = temp_mat[i,:], vocab = tr_vocab_fr,
                            word2vec_arr = tr_wvecs_fr)
@@ -237,9 +235,13 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
     tst_target_fr.append(temp1_list)
     temp1_list = [] # cleaning the list for next iteration
     spidx = spidx+tst_sent_len_fr_list[sidx][1]
-    sidx = sidx+1
-    
-  print tst_target_fr
+  
+  
+  tst_target_fr = [" ".join(word_list) for word_list in tst_target_fr]
+  out_fname = "results/translated.txt"
+  with open(out_fname, "wb") as res_file:
+    [res_file.writelines(line+"\r\n") for line in tst_target_fr]
+  res_file.close()
   
   return
 

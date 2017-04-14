@@ -99,7 +99,7 @@ class NeuralNet(object):
 
   def sigmoid(self, x=None):
     """
-    Sigmoidal activation function [-1,1]
+    Sigmoidal activation function [0,1]
     """
     ex = np.exp(-x)
     out = 1/(1+ex) 
@@ -107,7 +107,7 @@ class NeuralNet(object):
     
   def act_tanh(self, x=None):
     """
-    Sigmoidal activation function [-1,1]
+    Tanh activation function [-1,1]
     """
     ex = np.exp(-x)
     out = (1-ex)/(1+ex) 
