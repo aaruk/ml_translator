@@ -113,6 +113,16 @@ class NeuralNet(object):
     out = (1-ex)/(1+ex) 
     return out
 
+  def softmax(self, x=None):
+    """
+    Softmax activation function
+    
+    Important NOTE: Softmax applied to entire layer at once
+    """
+    ex  = np.exp(-x)
+    out_vec = (1/ex.sum())*(ex)
+    return out_vec
+
   def predict(self, x):
     """
     Function predicts on a single training/testing sample using trained weights
@@ -147,6 +157,11 @@ class NeuralNet(object):
         self.z[idx] = self.sigmoid(wx)
       elif self.activation=="tanh":
         self.z[idx] = self.act_tanh(wx)
+
+      # Apply softmax only if it is last layer
+      if idx == (layer_count-1):
+        if self.activation == "softmax":
+          self.z[idx] = self.softmax(wx)
         
     out = np.zeros((x.shape[0],x.shape[1]))
     nn = 0 #index for tracking row of out matrix to append
@@ -184,16 +199,20 @@ class NeuralNet(object):
         z = self.z[i]
         z_prev = self.z[i-1]
         bias = np.ones((z_prev.shape[1], 1))
+
         if self.seq_node_cnt_list[i-1]>0:
           z_prev = np.concatenate((bias, source_mat[i-1,:].reshape(source_mat.shape[1],1), z_prev), axis=0)
         else:
           z_prev = np.concatenate((bias, z_prev), axis=0)
+
         if i == (self.layer_count-1):
           # TODO: Update here if activation function is changed
-          if self.activation == "sigmoid":
+          if self.out_activation == "sigmoid":
             self.layer_grads[i] = (target-z)*z*(1-z)
-          elif self.activation == "tanh":
+          elif self.out_activation == "tanh":
             self.layer_grads[i] = (target-z)*(1-z)*(1+z)*(1/2.0)
+          if self.out_activation == "softmax":
+            self.layer_grads[i] = (target-z)
         else:
           # Note that wt from next layer has to be used (before wt updation)
           if self.seq_node_cnt_list[i]>0:

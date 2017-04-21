@@ -1,3 +1,4 @@
+import platform
 import numpy as np
 import proto.neural_net as nn
 import proto.word2vec as w2v
@@ -249,17 +250,35 @@ def train_test_mozhi_net(tr_fpath=None, tst_fpath=None, retrain=True,
 
 
 if __name__ == "__main__":
-  train_test_mozhi_net(tr_fpath="data\\akns\\set_01\\", 
-                       tst_fpath="data\\akns\\set_01\\",
-                       retrain=True, 
-                       reenc=True,
-                       wvecs_len=8,
-                       phr_wrd_cnt=3,
-                       wvecs_en_fpath="data\\wvecs_en_file.npy",
-                       vocab_en_fpath="data\\vocab_en_file.npy",
-                       cc_mat_en_fpath="data\\cc_mat_en_file.npy",
-                       wvecs_fr_fpath="data\\wvecs_fr_file.npy",
-                       vocab_fr_fpath="data\\vocab_fr_file.npy",
-                       cc_mat_fr_fpath="data\\cc_mat_fr_file.npy")
-  # train_test_mozhi_net_for_debugging()
-  
+
+
+  if platform.system() == "Linux":
+    train_test_mozhi_net(tr_fpath="data/akns/set_01/",
+                         tst_fpath="data/akns/set_01/",
+                         retrain=True, 
+                         reenc=True,
+                         wvecs_len=8,
+                         phr_wrd_cnt=3,
+                         wvecs_en_fpath="data/wvecs_en_file.npy",
+                         vocab_en_fpath="data/vocab_en_file.npy",
+                         cc_mat_en_fpath="data/cc_mat_en_file.npy",
+                         wvecs_fr_fpath="data/wvecs_fr_file.npy",
+                         vocab_fr_fpath="data/vocab_fr_file.npy",
+                         cc_mat_fr_fpath="data/cc_mat_fr_file.npy")
+    # train_test_mozhi_net_for_debugging()
+
+  else:
+    train_test_mozhi_net(tr_fpath="data\\akns\\set_01\\", 
+                         tst_fpath="data\\akns\\set_01\\",
+                         retrain=True, 
+                         reenc=True,
+                         wvecs_len=8,
+                         phr_wrd_cnt=3,
+                         wvecs_en_fpath="data\\wvecs_en_file.npy",
+                         vocab_en_fpath="data\\vocab_en_file.npy",
+                         cc_mat_en_fpath="data\\cc_mat_en_file.npy",
+                         wvecs_fr_fpath="data\\wvecs_fr_file.npy",
+                         vocab_fr_fpath="data\\vocab_fr_file.npy",
+                         cc_mat_fr_fpath="data\\cc_mat_fr_file.npy")
+    # train_test_mozhi_net_for_debugging()
+    
