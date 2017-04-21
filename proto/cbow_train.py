@@ -1,4 +1,5 @@
 import platform
+import json
 import pandas as pd
 import ast
 import numpy as np
@@ -44,6 +45,11 @@ def create_cbow_tr_data(fpath="", win_size=1):
   vocab_indices = {}
   for i in np.arange(vocab_rows):
     vocab_indices[vocab[i]] = i
+
+  with open('datasets/europarl/eng_vocab_akns_150.json', 'wb') as mf:
+    my_str = json.dumps(vocab_indices, encoding='utf-8')
+    mf.writelines(my_str)
+  mf.close()
 
   onehot_list = []
   cbow_data = []
@@ -104,9 +110,11 @@ def embed_words_cbow(tr_fpath="", retrain=True):
 if __name__ == "__main__":
   if platform.system() == "Linux":
     usew2v = True
-    embed_words_cbow(tr_fpath="datasets/europarl/eng_150.txt",
-                     retrain=True)
+    
+    #embed_words_cbow(tr_fpath="datasets/europarl/eng_150.txt",
+    #                 retrain=True)
     # train_test_mozi_net_for_debugging()
+    train_mat, vocab_len = create_cbow_tr_data("datasets/europarl/eng_150.txt", 3)
   else:
     embed_words_cbow(tr_fpath="datasets\\europarl\\eng_100.txt", 
                      retrain=True)
