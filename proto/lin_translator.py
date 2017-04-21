@@ -40,18 +40,19 @@ def train_wt(tr_fpath="", tst_fpath=""):
   #dst_wvecs, dst_vocab = read_word_vecs(tr_fpath+"IT.200K.cbow1_wind5_hs0_neg10_size300_smpl1e-05.txt")
 
   # Load training data: word vectors & dictionary
-  src_wvecs = np.load("datasets/eng_ital/eng_wvecs.npy")
-  dst_wvecs = np.load("datasets/eng_ital/ital_wvecs_nu.npy")
+  tr_fprefix = "datasets/europarl/"
+  src_wvecs = np.load(tr_fprefix+"eng_wvecs_akns_w3_150.npy")
+  dst_wvecs = np.load(tr_fprefix+"itl_wvecs_akns_w3_150.npy")
 
   eng_vocab, ital_vocab = {}, {}
-  with open("datasets/eng_ital/eng_vocab.json", "rb") as mf:
+  with open(tr_fprefix+"eng_vocab_akns_150.json", "rb") as mf:
     src_vocab = json.load(mf)
   mf.close()
-  with open("datasets/eng_ital/ital_vocab_1k.json", "rb") as mf:
+  with open(tr_fprefix+"itl_vocab_akns_150.json", "rb") as mf:
     dst_vocab = json.load(mf)
   mf.close()
 
-  src_wvec_len, dst_wvec_len = 250, 250
+  src_wvec_len, dst_wvec_len = 150, 140
   # Initialize linear transformation matrix with random values
   wt = np.random.uniform(low=-0.5, high=0.5, size=(dst_wvec_len, src_wvec_len))
 
@@ -61,17 +62,18 @@ def train_wt(tr_fpath="", tst_fpath=""):
   mf.close()
 
   # Take subset of tr_data
-  tr_data = tr_data[:500]
+  #tr_data = tr_data[:500]
   src_words, dst_words = [], []
   for data in tr_data:
     data = data.strip("\n")
     eng, ital = data.split(" ")
-    src_words.append(eng)
-    dst_words.append(ital)
+    if eng in src_vocab and ital in dst_vocab:
+      src_words.append(eng)
+      dst_words.append(ital)
 
   sample_count = len(src_words)
 
-  epochs = 2000
+  epochs = 20
   eta = 0.01
   # Stochastic gradient descent
   #NOTE: d1->src_dim, d2->dst_dim
@@ -80,22 +82,25 @@ def train_wt(tr_fpath="", tst_fpath=""):
     found = 0
     for i in np.arange(sample_count):
       # Get source and dst word vec representations
-      src_word_ind = src_vocab[src_words[i]]
-      x = src_wvecs[src_word_ind, :src_wvec_len] # d1,
-      x = np.reshape(x, (x.shape[0], 1))
+      eng, ital = src_words[i], dst_words[i]
+      if eng in src_vocab and ital in dst_vocab:
+        src_word_ind = src_vocab[src_words[i]]
+        x = src_wvecs[src_word_ind, :src_wvec_len] # d1,
+        x = np.reshape(x, (x.shape[0], 1))
 
-      dst_word_ind = dst_vocab[dst_words[i].decode('utf-8')]
-      target = dst_wvecs[dst_word_ind, :dst_wvec_len] # 1xd2
-      target = np.reshape(target, (target.shape[0], 1))
+        dst_word_ind = dst_vocab[dst_words[i].decode('utf-8')]
+        target = dst_wvecs[dst_word_ind, :dst_wvec_len] # 1xd2
+        target = np.reshape(target, (target.shape[0], 1))
 
-      # Transform src to dst vec representation
-      pred = np.matmul(wt, x)  # d2x1
+        # Transform src to dst vec representation
+        pred = np.matmul(wt, x)  # d2x1
 
-      # Backprop error due to transformation
-      err = target - pred  # d2x1
-      dw = np.matmul(err,  x.T)  # d2xd1
-      wt = wt+eta*dw # d2xd1
-      found +=1
+        # Backprop error due to transformation
+        err = target - pred  # d2x1
+        dw = np.matmul(err,  x.T)  # d2xd1
+        wt = wt+eta*dw # d2xd1
+    if e%5 == 0:
+      np.savetxt("models/wt_mat_"+str(e)+".txt", wt)
 
     print "Epoch : ", e, "  "
     test_model(wt, src_words, src_wvecs, src_vocab, dst_words, dst_wvecs, dst_vocab)
@@ -106,27 +111,27 @@ def train_wt(tr_fpath="", tst_fpath=""):
     my_str= json.dumps(tst_preds, encoding="utf-8")
     mf.writelines(my_str)
   mf.close()
-  np.savetxt("models/wt_mat.csv", wt)
   return
 
 
 def test_model(wts, src_words, src_wvecs, src_vocab, dst_words, dst_wvecs, dst_vocab):
   """
   """
-  src_wvec_len, dst_wvec_len = 250, 250
+  src_wvec_len, dst_wvec_len = 150, 140
   pred_dict = {}
   acc_list = []
   for src, dst in zip(src_words, dst_words):
-    src_ind = src_vocab[src] 
-    x = src_wvecs[src_ind, :src_wvec_len]
-    x = np.reshape(x, (x.shape[0], 1))
-    dst_ind = dst_vocab[dst.decode("utf-8")]
-    target = dst_wvecs[dst_ind, :dst_wvec_len]
-    pred = np.matmul(wts, x)
-    pred_t = np.reshape(pred, (pred.shape[0],))
-    pred_word = vw.vec2word(pred_t, dst_vocab, dst_wvecs[:, :dst_wvec_len])  
-    pred_dict[dst] = pred_word #.decode('utf-8')
-    acc_list.append(pred_word == dst.decode('utf-8'))
+    if src in src_vocab and dst in dst_vocab:
+      src_ind = src_vocab[src] 
+      x = src_wvecs[src_ind, :src_wvec_len]
+      x = np.reshape(x, (x.shape[0], 1))
+      dst_ind = dst_vocab[dst.decode("utf-8")]
+      target = dst_wvecs[dst_ind, :dst_wvec_len]
+      pred = np.matmul(wts, x)
+      pred_t = np.reshape(pred, (pred.shape[0],))
+      pred_word = vw.vec2word(pred_t, dst_vocab, dst_wvecs[:, :dst_wvec_len])  
+      pred_dict[src] = (pred_word, dst) #.decode('utf-8')
+      acc_list.append(pred_word == dst.decode('utf-8'))
 
   acc = np.array(acc_list).astype(np.uint8)
   #acc = acc_list.astype(np.uint8)
