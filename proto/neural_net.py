@@ -9,6 +9,7 @@ class NeuralNet(object):
 
   def __init__(self, layer_count=1,
                      activation="sigmoid",
+                     out_activ="softmax",
                      max_epochs=100,
                      eta=0.1,
                      phr_wrd_cnt=1):
@@ -29,6 +30,7 @@ class NeuralNet(object):
     """
     self.layer_count = layer_count
     self.activation = activation
+    self.out_activation = out_activ
     self.epochs = max_epochs
     self.phr_wrd_cnt = phr_wrd_cnt
 
@@ -39,6 +41,9 @@ class NeuralNet(object):
     self.z          = [None]*layer_count
     self.eta        = eta
     self.seq_node_cnt_list = [0]*layer_count
+    self.train_labels_orig = None
+    self.test_labels_orig = None
+
 
   def init_layer(self, layer_idx=None, layer_type=None, node_count=1,
                  layer_params=None,
@@ -61,14 +66,17 @@ class NeuralNet(object):
       # If idx=0, layer is layer_wts = input vector itself
       self.layer_wts[layer_idx] = np.array((node_count, 1))
       self.layer_dims[layer_idx] = node_count
-      self.seq_node_cnt_list[layer_idx] = 0 #We don't want to add any additional nodes to input layer
+      # We don't want to add any additional nodes to input layer
+      self.seq_node_cnt_list[layer_idx] = 0
     else:
       self.seq_node_cnt_list[layer_idx] = seq_node_cnt
       # Included Bias and input word
       prev_node_count = self.layer_dims[layer_idx-1]+self.seq_node_cnt_list[layer_idx-1]+1
 
       # wts are initialzed from a normal distribution
-      self.layer_wts[layer_idx] = np.random.randn(node_count, prev_node_count)
+      # self.layer_wts[layer_idx] = np.random.rand(node_count, prev_node_count)
+      self.layer_wts[layer_idx] = np.random.uniform(low=-0.05, high=0.05,\
+                                                    size=(node_count, prev_node_count))
       self.layer_grads[layer_idx] = np.zeros((node_count, prev_node_count), np.float32)
 
       # Hidden layer activation outputs
@@ -82,20 +90,35 @@ class NeuralNet(object):
     Function sets training data to be used for wt updation using
     backpropagation
     """
-    self.train_data = inp_data[:, :inp_data.shape[1]/2]
-    self.train_targets = inp_data[:, inp_data.shape[1]/2:]
+    inp_dim = self.layer_dims[0]
+    out_dim = self.layer_dims[self.layer_count-1]
+    self.train_data = inp_data[:, :inp_dim]
+    self.train_targets = inp_data[:, inp_dim:]
     return
+
 
   def set_test_data(self, test_data=None):
     """
     Function sets training data to be used for wt updation using
     backpropagation
     """
-    self.test_data = test_data[:, :test_data.shape[1]/2]
-    self.test_targets = test_data[:, test_data.shape[1]/2:]
-    #self.test_data = test_data
-    #self.test_targets = test_data[:, -2:] #NOTE: Hardcoded - replace with output unit_count
+    inp_dim = self.layer_dims[0]
+    out_dim = self.layer_dims[self.layer_count-1]
+    self.test_data = test_data[:, :inp_dim]
+    self.test_targets = test_data[:, inp_dim:]
     return
+
+
+  def set_orig_labels(self, tr_labels_orig, tst_labels_orig):
+    """
+    Function sets integer labels [0,1,2,3...] instead of the "Indicator" labels
+    used for neural  net training"
+    """
+
+    self.train_labels_orig = tr_labels_orig
+    self.test_labels_orig  = tst_labels_orig
+    return
+
 
   def sigmoid(self, x=None):
     """
@@ -104,7 +127,8 @@ class NeuralNet(object):
     ex = np.exp(-x)
     out = 1/(1+ex) 
     return out
-    
+
+
   def act_tanh(self, x=None):
     """
     Tanh activation function [-1,1]
@@ -113,15 +137,22 @@ class NeuralNet(object):
     out = (1-ex)/(1+ex) 
     return out
 
+
   def softmax(self, x=None):
     """
     Softmax activation function
     
     Important NOTE: Softmax applied to entire layer at once
     """
-    ex  = np.exp(-x)
-    out_vec = (1/ex.sum())*(ex)
+    ex  = abs(np.exp(x))
+    denom = ex.sum()
+    if denom > (10**(-4)):
+      out_vec = (1/denom)*(ex)
+    else:
+      out_vec = np.zeros(x.shape) 
+    #print out_vec.T, 
     return out_vec
+
 
   def predict(self, x):
     """
@@ -151,6 +182,8 @@ class NeuralNet(object):
       else:
         xi = np.concatenate((bias, xi), axis=0)
       wx = np.matmul(wts, xi)
+      #print "wx: "
+      #print wx.T
       # Handle different activation types cleanly
       #NOTE: Make sure to do appropriate changes to backprop
       if self.activation=="sigmoid":
@@ -159,18 +192,20 @@ class NeuralNet(object):
         self.z[idx] = self.act_tanh(wx)
 
       # Apply softmax only if it is last layer
-      if idx == (layer_count-1):
-        if self.activation == "softmax":
+      if idx == (self.layer_count-1):
+        if self.out_activation == "softmax":
           self.z[idx] = self.softmax(wx)
         
-    out = np.zeros((x.shape[0],x.shape[1]))
+    #out = np.zeros((x.shape[0],x.shape[1]))
+    out = np.zeros((1, self.layer_dims[self.layer_count-1]))
     nn = 0 #index for tracking row of out matrix to append
     for mm in np.arange(self.layer_count-self.phr_wrd_cnt,self.layer_count):
       out[nn,:] = self.z[mm].reshape(1,self.z[mm].shape[0])
       nn = nn+1
     return out
 
-  def predict_all(self, inp_array=None):
+
+  def predict_all(self, inp_data=None):
     """
     Function predicts on an array of samples
 
@@ -179,7 +214,19 @@ class NeuralNet(object):
     Output: [mxn] Array of predictions m-no of samples; n-dim of output data
     -------
     """
-    return pred_mat
+
+    # Test trained model
+    preds = []
+    for i in np.arange(inp_data.shape[0]):
+      x = np.reshape(inp_data[i], (1, inp_data[i].shape[0]))
+      nn_pred = self.predict(x)
+      dig_pred = np.argmax(nn_pred)
+      #print nn_pred, " ---> "
+      #print dig_pred, "  "
+      preds.append(dig_pred)
+    preds = np.array(preds)
+    return preds
+
 
   def backprop(self, target_mat, source_mat):
     """
@@ -213,6 +260,7 @@ class NeuralNet(object):
             self.layer_grads[i] = (target-z)*(1-z)*(1+z)*(1/2.0)
           if self.out_activation == "softmax":
             self.layer_grads[i] = (target-z)
+            #print z.T, target.T
         else:
           # Note that wt from next layer has to be used (before wt updation)
           if self.seq_node_cnt_list[i]>0:
@@ -234,8 +282,10 @@ class NeuralNet(object):
     jj = 0
     for kk in np.arange(0,self.phr_wrd_cnt):
       for l in np.arange(self.layer_count-1-kk,  0, step=-1):
-        self.layer_wts[l] =  self.layer_wts[l]-self.eta*dw_list[jj]
+        self.layer_wts[l] = self.layer_wts[l]+self.eta*dw_list[jj]
+        self.layer_wts[l][:, :] = self.layer_wts[l][:, :] - 0.001*self.layer_wts[l][:, :]
         jj += 1
+
     return
 
   def fit(self):
@@ -252,6 +302,28 @@ class NeuralNet(object):
         self.out = self.predict(x)
         tr_pred_list.append(self.out)
         target = self.train_targets[ii:ii+self.phr_wrd_cnt,:]
+        #print target
         self.backprop(target,x)
+
+      # Compute training & testing accuracy once every epoch
+      tr_preds = self.predict_all(self.train_data)
+      tr_labels_orig = self.train_labels_orig
+      tr_acc = np.array((tr_preds == tr_labels_orig), np.uint8)
+      total_tr_acc = tr_acc.sum()
+      tr_acc = float(total_tr_acc) / tr_labels_orig.shape[0] * 100
+
+      #tst_labels_orig = self.test_labels_orig
+      #tst_preds = self.predict_all(self.test_data)
+      #tst_acc = np.array((tst_preds == tst_labels_orig), np.uint8)
+      #total_tst_acc = tst_acc.sum()
+      #tst_acc = float(total_tst_acc) / tst_labels_orig.shape[0] * 100
+      print "Epoch : ", e, " | Training Accuracy: ", tr_acc, "%"
+      np.savetxt("results/tr_labels_orig_"+str(e)+".txt", tr_labels_orig, fmt="%.0f")
+      np.savetxt("results/tr_preds_"+str(e)+".txt", tr_preds, fmt="%.0f")
+
+      # Save network wts for each epoch
+      for i in np.arange(self.layer_count):
+        np.savetxt("models/layer_wts_"+str(i)+"_e"+str(e)+".txt", self.layer_wts[i], delimiter=", ")
+
     return
 # End of class Neural Network
