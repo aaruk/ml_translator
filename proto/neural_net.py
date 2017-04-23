@@ -42,7 +42,8 @@ class NeuralNet(object):
 
   def init_layer(self, layer_idx=None, layer_type=None, node_count=1,
                  layer_params=None,
-                 seq_node_cnt=0):
+                 seq_node_cnt=0,
+                 wts_fname=None):
     """
     Function initializes layers - setting layer types, layer_params,
     random weights. Has to be called as many times as there are layers
@@ -68,7 +69,10 @@ class NeuralNet(object):
       prev_node_count = self.layer_dims[layer_idx-1]+self.seq_node_cnt_list[layer_idx-1]+1
 
       # wts are initialzed from a normal distribution
-      self.layer_wts[layer_idx] = np.random.randn(node_count, prev_node_count)
+      if wts_fname==None:
+        self.layer_wts[layer_idx] = np.random.uniform(low=-0.07, high=0.07,size=(node_count, prev_node_count))
+      else:
+        self.layer_wts[layer_idx] = np.loadtxt(wts_fname, delimiter=", ")
       self.layer_grads[layer_idx] = np.zeros((node_count, prev_node_count), np.float32)
 
       # Hidden layer activation outputs
@@ -194,6 +198,8 @@ class NeuralNet(object):
             self.layer_grads[i] = (target-z)*z*(1-z)
           elif self.activation == "tanh":
             self.layer_grads[i] = (target-z)*(1-z)*(1+z)*(1/2.0)
+          elif self.activation == "linear":
+            self.layer_grads[i] = (target-z)
         else:
           # Note that wt from next layer has to be used (before wt updation)
           if self.seq_node_cnt_list[i]>0:
@@ -205,6 +211,8 @@ class NeuralNet(object):
             self.layer_grads[i] = np.matmul(wt_next.T, grad_next)*z*(1-z)
           elif self.activation == "tanh":
             self.layer_grads[i] = np.matmul(wt_next.T, grad_next)*(1-z)*(1+z)*(1/2.0)
+          elif self.activation == "linear":
+            self.layer_grads[i] = np.matmul(wt_next.T, grad_next)
         dw = np.matmul(self.layer_grads[i], z_prev.T) 
         dw_list.append(dw)
 
@@ -215,7 +223,8 @@ class NeuralNet(object):
     jj = 0
     for kk in np.arange(0,self.phr_wrd_cnt):
       for l in np.arange(self.layer_count-1-kk,  0, step=-1):
-        self.layer_wts[l] =  self.layer_wts[l]-self.eta*dw_list[jj]
+        self.layer_wts[l] =  self.layer_wts[l]+self.eta*dw_list[jj]
+        #self.layer_wts[l] =  self.layer_wts[l]-0.0001*self.layer_wts[l]
         jj += 1
     return
 
@@ -234,5 +243,9 @@ class NeuralNet(object):
         tr_pred_list.append(self.out)
         target = self.train_targets[ii:ii+self.phr_wrd_cnt,:]
         self.backprop(target,x)
+      # Save network wts for each epoch
+      for i in np.arange(self.layer_count):
+        np.savetxt("models/layer_wts_"+str(i)+"_e"+str(e)+".txt", self.layer_wts[i], delimiter=", ")
+      print "epoch=", e
     return
 # End of class Neural Network
